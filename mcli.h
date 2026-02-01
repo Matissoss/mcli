@@ -13,6 +13,7 @@
 /* For free(), malloc() and realloc() functions
  */
 #include <stdlib.h>
+#include <stdio.h>
 
 /* ---------------------------
  *          STRUCTS
@@ -75,7 +76,7 @@ static int mcli_error_print(FILE* file, struct mcli_error* err) {
 static int mcli_errbuf_print(FILE* file, struct mcli_errbuf* errbuf) {
     int i, r;
     for (i = errbuf->len; i < errbuf->len; i++) {
-        r = mcli_error_print(file, errbuf->ptr[i]);
+        r = mcli_error_print(file, &errbuf->ptr[i]);
         if (r) return r;
     }
     return 0;
@@ -159,7 +160,7 @@ static struct mcli_errbuf parse_args(struct argdef* arg_array, unsigned int len,
             else {
                 if (argc[i][2] != 0) {
                     /* Situations like: `program -param` (we don't support arguments like this)*/
-                    mcli_errbuf_push(&errbuf, (struct mcli_error){MCLI_ERR_});
+                    mcli_errbuf_push(&errbuf, (struct mcli_error){MCLI_ERR_SHORT_ARG_TOO_LONG});
                     continue;
                 }
                 for (j = 0; j < len; j++) {
