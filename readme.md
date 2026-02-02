@@ -16,19 +16,25 @@ int main(int argv, char **argc) {
     struct argdef output = argdef_short('o', 1);
     struct argdef input = argdef_value();
     struct argdef help = argdef_full('h', "help", 0);
-    struct argdef version = argdef_long("version", 0);
-    struct argdef* argtable[4] = { &output, &input, &help, &version };
-    /* mcli_errbuf is allocates on the heap, so don't forget to call mcli_errbuf_free later */
-    struct mcli_errbuf errbuf = parse_args(argtable, 4, argv, argc);
+    struct argdef version = argdef_full('v', "version", 0);
+    struct argdef* argtable[4];
+    struct mcli_errbuf errbuf;
+    argtable[0] = &output;
+    argtable[1] = &input;
+    argtable[2] = &help;
+    argtable[3] = &version;
+    
+    errbuf = parse_args(argtable, 4, argv, argc);
+
     if (errbuf.len) {
-        mcli_errbuf_print(stderr, &errbuf);
+        mcli_errbuf_print(&errbuf, stderr);
         return 1;
     }
-    /* value is a char*, while found is an int (how many times it was found in the provided arguments) */
-    if (output.value != 0)  printf("OUTPUT: %s\n", output.value);
-    if (input.value != 0)   printf("INPUT: %s\n", input.value);
-    if (help.found != 0)    printf("HELP: %u\n", help.found);
-    if (version.found != 0) printf("VERSION: %u\n", version.found);
+
+    if (input.value.str) printf("INPUT: %s\n", input.value.str);
+    if (output.value.str) printf("OUTPUT: %s\n", output.value.str);
+    if (help.value.found) printf("HELP: %u\n", help.value.found);
+    if (version.value.found) printf("VERSION: %u\n", version.value.found);
     mcli_errbuf_free(&errbuf);
     return 0;
 }
