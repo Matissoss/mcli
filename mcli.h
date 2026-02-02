@@ -75,7 +75,7 @@ static int mcli_error_print(FILE* file, struct mcli_error* err) {
 
 static int mcli_errbuf_print(FILE* file, struct mcli_errbuf* errbuf) {
     int i, r;
-    for (i = errbuf->len; i < errbuf->len; i++) {
+    for (i = 0; i < errbuf->len; i++) {
         r = mcli_error_print(file, &errbuf->ptr[i]);
         if (r) return r;
     }
@@ -86,16 +86,17 @@ static void mcli_errbuf_push(struct mcli_errbuf* errbuf, struct mcli_error err) 
     if (!errbuf->ptr) {
         errbuf->ptr = malloc(1 * sizeof((struct argdef){0}));
         errbuf->ptr[0] = err;
+        errbuf->len = 1;
     } else {
-        errbuf->ptr = realloc(errbuf->ptr, ++errbuf->len);
+        errbuf->len += 1;
+        errbuf->ptr = realloc(errbuf->ptr, errbuf->len);
         errbuf->ptr[errbuf->len-1] = err;
     }
 }
 
 static void mcli_errbuf_free(struct mcli_errbuf* errbuf) {
-    free(errbuf->ptr);
+    if (errbuf->ptr) free(errbuf->ptr);
 }
-
 
 static struct argdef argdef_full(char short_name, char* long_name, int accepts_value) {
     struct argdef argdef = {0};
@@ -124,7 +125,20 @@ static struct argdef argdef_value() {
     return argdef;
 }
 
-static struct mcli_errbuf parse_args(struct argdef* arg_array, unsigned int len, unsigned int argv, char** argc) {
+/* 0 if it's not a flag
+ * 1 if it's a short flag
+ * 2 if it's a long flag
+ * we assert that flag is not NULL
+ */
+static int _mcli_flag_type(const char const* flag) {
+    if (flag[0] == '-') {
+        return flag[1] == '-' ? 2 : (flag[1] == 0 ? 0 : 1);
+    } else {
+        return 0;
+    }
+}
+
+static struct mcli_errbuf parse_args(struct argdef* arg_array[], unsigned int len, unsigned int argv, char** argc) {
     struct mcli_errbuf errbuf = {0};
     int i, j;
     char c0;
@@ -140,19 +154,20 @@ static struct mcli_errbuf parse_args(struct argdef* arg_array, unsigned int len,
             /* Long Flag */
             else if (c0 == '-') {
                 for (j = 0; j < len; j++) {
-                    if (!arg_array[j].hdr.long_name) continue;
-                    if (strcmp(arg_array[j].hdr.long_name, argc[i] + 2) == 0) {
-                        if (arg_array[j].hdr.accepts_value) {
+                    if (!arg_array[j]->hdr.long_name) continue;
+                    if (strcmp(arg_array[j]->hdr.long_name, argc[i] + 2) == 0) {
+                        if (arg_array[j]->hdr.accepts_value) {
                             if (++i < argv) {
-                                arg_array[j].value = argc[i];
+                                arg_array[j]->value = argc[i];
                             } else {
                                 /* ERROR: expected value, but arguments ended 
                                  * Situations like: `program --param ` where `struct argdef param = argdef_long("param", 1);`*/
-                                mcli_errbuf_push(&errbuf, (struct mcli_error){MCLI_ERR_NO_VALUE, argc[i]});
+                                mcli_errbuf_push(&errbuf, (struct mcli_error){MCLI_ERR_NO_VALUE, argc[i - 1]});
                             }
                         } else {
-                            arg_array[j].found++;
+                            arg_array[j]->found++;
                         }
+                        break;
                     }
                 }
             }
@@ -164,29 +179,31 @@ static struct mcli_errbuf parse_args(struct argdef* arg_array, unsigned int len,
                     continue;
                 }
                 for (j = 0; j < len; j++) {
-                    if (arg_array[j].hdr.short_name == c0) {
-                        if (arg_array[j].hdr.accepts_value) {
+                    if (arg_array[j]->hdr.short_name != 0 && arg_array[j]->hdr.short_name == c0) {
+                        if (arg_array[j]->hdr.accepts_value) {
                             if (++i < argv) {
-                                arg_array[j].value = argc[i];
+                                arg_array[j]->value = argc[i];
                             } else {
                                 /* ERROR: expected value, but arguments ended 
                                  * Situations like: `program -o ` where `struct argdef output = argdef_short('o', 1);`*/
-                                mcli_errbuf_push(&errbuf, (struct mcli_error){MCLI_ERR_NO_VALUE, argc[i]});
+                                mcli_errbuf_push(&errbuf, (struct mcli_error){MCLI_ERR_NO_VALUE, argc[i - 1]});
                             }
                         } else {
-                            arg_array[j].found++;
+                            arg_array[j]->found++;
                         }
+                        break;
                     }
                 }
             }
         } else {
             for (j = 0; j < len; j++) {
-                if (!arg_array[j].hdr.short_name && 
-                    !arg_array[j].hdr.long_name &&
-                     arg_array[j].hdr.accepts_value && 
-                    !arg_array[j].value) 
+                if (!arg_array[j]->hdr.short_name && 
+                    !arg_array[j]->hdr.long_name &&
+                     arg_array[j]->hdr.accepts_value && 
+                    !arg_array[j]->value) 
                 {
-                    arg_array[j].value = argc[i];
+                    arg_array[j]->value = argc[i];
+                    break;
                 }
             }
         }
