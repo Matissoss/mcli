@@ -18,6 +18,7 @@ int main(int argv, char **argc) {
     struct argdef help = argdef_full('h', "help", 0);
     struct argdef version = argdef_long("version", 0);
     struct argdef* argtable[4] = { &output, &input, &help, &version };
+    /* mcli_errbuf is allocates on the heap, so don't forget to call mcli_errbuf_free later */
     struct mcli_errbuf errbuf = parse_args(argtable, 4, argv, argc);
     if (errbuf.len) {
         mcli_errbuf_print(stderr, &errbuf);
