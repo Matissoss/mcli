@@ -7,11 +7,9 @@
 #define MCLI_H
 
 /* We include <string.h> header for strcmp 
- * You can provide your own strcmp implementation if you want :)
- */
+ * You can provide your own strcmp implementation if you want :) */
 #include <string.h>
-/* For free(), malloc() and realloc() functions
- */
+/* For free(), malloc() and realloc() functions */
 #include <stdlib.h>
 #include <stdio.h>
 
