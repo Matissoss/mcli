@@ -62,7 +62,7 @@ struct mcli_errbuf {
  *       IMPLEMENTATION
  * ---------------------------*/
 
-static int mcli_error_print(struct mcli_error* err, FILE* file) {
+int mcli_error_print(struct mcli_error* err, FILE* file) {
     switch (err->error_code) {
         case MCLI_ERR_NO_VALUE:
             return fprintf(file, "%s: no value found\n", err->value);
@@ -79,7 +79,7 @@ static int mcli_error_print(struct mcli_error* err, FILE* file) {
     }
 }
 
-static int mcli_errbuf_print(struct mcli_errbuf* errbuf, FILE* file) {
+int mcli_errbuf_print(struct mcli_errbuf* errbuf, FILE* file) {
     int i, r;
     for (i = 0; i < errbuf->len; i++) {
         r = mcli_error_print(&errbuf->ptr[i], file);
@@ -88,46 +88,46 @@ static int mcli_errbuf_print(struct mcli_errbuf* errbuf, FILE* file) {
     return 0;
 }
 
-static void mcli_errbuf_push(struct mcli_errbuf* errbuf, struct mcli_error err) {
+void mcli_errbuf_push(struct mcli_errbuf* errbuf, struct mcli_error err) {
     struct argdef a = {0};
     long size = sizeof(a);
     if (!errbuf->ptr) {
-        errbuf->ptr = malloc(1 * size);
+        errbuf->ptr = (struct mcli_error*)malloc(1 * size);
         errbuf->ptr[0] = err;
         errbuf->len = 1;
     } else {
         errbuf->len += 1;
-        errbuf->ptr = realloc(errbuf->ptr, errbuf->len * size);
+        errbuf->ptr = (struct mcli_error*)realloc(errbuf->ptr, errbuf->len * size);
         errbuf->ptr[errbuf->len-1] = err;
     }
 }
 
-static void mcli_errbuf_free(struct mcli_errbuf* errbuf) {
+void mcli_errbuf_free(struct mcli_errbuf* errbuf) {
     if (errbuf->ptr) free(errbuf->ptr);
 }
 
-static struct argdef argdef_full(char short_name, char* long_name, int accepts_value) {
+struct argdef argdef_full(char short_name, char* long_name, int accepts_value) {
     struct argdef argdef = {0};
     argdef.hdr.short_name = short_name;
     argdef.hdr.long_name = long_name;
     argdef.hdr.accepts_value = accepts_value;
     return argdef;
 }
-static struct argdef argdef_long(char* long_name, int accepts_value) {
+struct argdef argdef_long(char* long_name, int accepts_value) {
     struct argdef argdef = {0};
     argdef.hdr.long_name = long_name;
     argdef.hdr.accepts_value = accepts_value;
     return argdef;
 }
 
-static struct argdef argdef_short(char short_name, int accepts_value) {
+struct argdef argdef_short(char short_name, int accepts_value) {
     struct argdef argdef = {0};
     argdef.hdr.short_name = short_name;
     argdef.hdr.accepts_value = accepts_value;
     return argdef;
 }
 
-static struct argdef argdef_value() {
+struct argdef argdef_value() {
     struct argdef argdef = {0};
     argdef.hdr.accepts_value = 1;
     return argdef;
@@ -148,7 +148,7 @@ static int _mcli_flag_type(char *flag) {
     }
 }
 
-static struct mcli_errbuf parse_args(struct argdef* arg_array[], unsigned int len, unsigned int argv, char** argc) {
+struct mcli_errbuf parse_args(struct argdef* arg_array[], unsigned int len, unsigned int argv, char** argc) {
     struct mcli_errbuf errbuf = {0};
     struct mcli_error e;
     int i, j, found;
